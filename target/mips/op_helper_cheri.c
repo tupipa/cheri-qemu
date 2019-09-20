@@ -390,8 +390,8 @@ static inline void check_cap(CPUMIPSState *env, const cap_register_t *cr,
         goto do_exception;
     }
 
-    fprintf(qemu_logfile, "LLM: %s:%s: cap got checked\n", 
-            __FILE__, __FUNCTION__);
+    //fprintf(qemu_logfile, "LLM: %s:%s: cap got checked\n", 
+    //        __FILE__, __FUNCTION__);
     return;
 
 do_exception:
