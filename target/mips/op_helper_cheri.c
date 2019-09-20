@@ -316,6 +316,11 @@ static inline int align_of(int size, uint64_t addr)
     }
 }
 
+
+static inline void caps_have_same_type(const cap_register_t* cap1, const cap_register_t* cap2){
+    return (cap1->cr_otype == cap2->cr_otype);
+}
+
 static inline void check_cap(CPUMIPSState *env, const cap_register_t *cr,
         uint32_t perm, uint64_t addr, uint16_t regnum, uint32_t len, bool instavail, uintptr_t pc)
 {
@@ -366,6 +371,27 @@ static inline void check_cap(CPUMIPSState *env, const cap_register_t *cr,
         goto do_exception;
     }
 
+    if (!caps_have_same_type(&env->active_tc.PCC, cr) )
+    {
+        cause = CP2Ca_TYPE;
+        fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION: \n"
+            "\tPCC.type different with current cap in use: \n"
+            "DDC type: 0x%x, cap type: 0x%x" , 
+            __FILE__, __FUNCTION__, env->active_tc.PCC.otype, cr->otype);
+        goto do_exception;
+    }
+    if (!caps_have_same_type(env->active_tc.CHWR.DDC, cr) )
+    {
+        cause = CP2Ca_TYPE;
+        fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION: \n"
+            "\tDDC.type different with current cap in use: \n"
+            "DDC type: 0x%x, cap type: 0x%x" , 
+            __FILE__, __FUNCTION__, env->active_tc.DDC.otype, cr->otype);
+        goto do_exception;
+    }
+
+    fprintf(qemu_logfile, "LLM: %s:%s: cap got checked\n", 
+            __FILE__, __FUNCTION__);
     return;
 
 do_exception:
