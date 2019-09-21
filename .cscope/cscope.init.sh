@@ -1,7 +1,10 @@
 
 HOME=$HOME
 
-SRC_ROOT=$HOME/lab/sva/cheri/qemu
+SRC_ROOT=$HOME/lab/sva/cheri/qemu/
+
+echo "using source root: $SRC_ROOT"
+
 
 cd /
 find  $SRC_ROOT -name "*.[chxsS]" -print > $SRC_ROOT/.cscope/cscope.files
