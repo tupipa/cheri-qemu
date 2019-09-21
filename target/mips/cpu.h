@@ -181,9 +181,9 @@ struct cap_register {
 #endif
     uint32_t cr_otype;  /* Object Type, 24 bits */
     uint8_t  cr_tag;    /* Tag */
-#ifndef CHERI_128
+//#ifndef CHERI_128
     bool _sbit_for_memory;
-#endif
+//#endif
 };
 typedef struct cap_register cap_register_t;
 
