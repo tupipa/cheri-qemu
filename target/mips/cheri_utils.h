@@ -122,8 +122,12 @@ static inline bool cap_is_sealed_with_type(const cap_register_t* c) {
         else
             cheri_debug_assert(c->cr_otype == CAP_OTYPE_UNSEALED || c->cr_otype == CAP_OTYPE_SENTRY);
     }
+
 #endif
-    return c->cr_otype <= CAP_MAX_SEALED_OTYPE;
+    //LLM: code goes here for 128 hyb //assert(false && "now ifdef: CHERI_128");
+    //return c->cr_otype <= CAP_MAX_SEALED_OTYPE;//LLM: removed to use sbit first
+
+    return c->_sbit_for_memory ; // LLM: TODO should use sbit only; 
 }
 
 // Check if num_bytes bytes at addr can be read using capability c
@@ -149,38 +153,40 @@ static inline bool cap_is_unsealed(const cap_register_t* c) {
     // TODO: how should we treat the other reserved types? as sealed?
     // TODO: what about untagged capabilities with out-of-range otypes?
     _Static_assert(CAP_MAX_REPRESENTABLE_OTYPE == CAP_OTYPE_UNSEALED, "");
-#ifndef CHERI_128
+#ifndef CHERI_128 // LLM: TODO: shall we enable this for 128
     if (c->cr_tag) {
         if (c->_sbit_for_memory)
             cheri_debug_assert(c->cr_otype <= CAP_MAX_SEALED_OTYPE);
         else
             cheri_debug_assert(c->cr_otype == CAP_OTYPE_UNSEALED || c->cr_otype == CAP_OTYPE_SENTRY);
     }
+
 #endif
-    return c->cr_otype >= CAP_OTYPE_UNSEALED;
+    return !c->_sbit_for_memory; // +LLM: use sbit for 128 bits since now unsealed caps has real otypes maintained.
+    //return c->cr_otype >= CAP_OTYPE_UNSEALED; //-
 }
 
 static inline void cap_set_sealed(cap_register_t* c, uint32_t type) {
     assert(c->cr_tag);
-    assert(c->cr_otype == CAP_OTYPE_UNSEALED && "should not use this on caps with reserved otypes");
+    assert(c->cr_otype == CAP_OTYPE_UNSEALED && "should not use this on caps with reserved otypes"); //LLM: TODO remove this: to enable unsealed caps to be sealed again.
     assert(type <= CAP_MAX_SEALED_OTYPE);
     _Static_assert(CAP_MAX_SEALED_OTYPE < CAP_OTYPE_UNSEALED, "");
-    c->cr_otype = type;
-#ifndef CHERI_128
+    c->cr_otype = type; //LLM: TODO: if cr_otype <= CAP_MAX_SEALED_OTYPE, it must be equal to type;
+//#ifndef CHERI_128 // LLM: enable sbit for 128 by commenting out this.
     assert(c->_sbit_for_memory == false);
     c->_sbit_for_memory = true;
-#endif
+//#endif
 }
 
 static inline void cap_set_unsealed(cap_register_t* c) {
     assert(c->cr_tag);
     assert(cap_is_sealed_with_type(c));
     assert(c->cr_otype <= CAP_MAX_SEALED_OTYPE && "should not use this to unsealed reserved types");
-    c->cr_otype = CAP_OTYPE_UNSEALED;
-#ifndef CHERI_128
+    //c->cr_otype = CAP_OTYPE_UNSEALED; // LLM: keep the old otype value; use sbit to check seal/unseal.
+//#ifndef CHERI_128 // LLM: enable sbit for 128 by commenting out this.
     assert(c->_sbit_for_memory == true);
     c->_sbit_for_memory = false;
-#endif
+//#endif
 }
 
 static inline bool cap_is_sealed_entry(const cap_register_t* c) {
@@ -189,12 +195,15 @@ static inline bool cap_is_sealed_entry(const cap_register_t* c) {
 
 static inline void cap_unseal_entry(cap_register_t* c) {
     assert(c->cr_tag && cap_is_sealed_entry(c) && "Should only be used with sentry capabilities");
-    c->cr_otype = CAP_OTYPE_UNSEALED;
+    // c->cr_otype = CAP_OTYPE_UNSEALED; // LLM: don't reset unsealed type.
+    // assert(false && "LLM unseal entry should update sbit and not change otype");
+    c->_sbit_for_memory = false;
 }
 
 static inline void cap_make_sealed_entry(cap_register_t* c) {
     assert(c->cr_tag && cap_is_unsealed(c) && "Should only be used with unsealed capabilities");
     c->cr_otype = CAP_OTYPE_SENTRY;
+    c->_sbit_for_memory = true; // LLM: 
 }
 
 
@@ -204,6 +213,7 @@ static inline cap_register_t *null_capability(cap_register_t *cp)
     // For CHERI128 max length is 1 << 64 (__int128) for CHERI256 UINT64_MAX
     cp->_cr_top = CAP_MAX_TOP;
     cp->cr_otype = CAP_OTYPE_UNSEALED; // and otype should be unsealed
+    cp->_sbit_for_memory = false; // LLM: set cap as unsealed via sbit
     return cp;
 }
 
@@ -282,9 +292,10 @@ static inline void set_max_perms_capability(cap_register_t *crp, uint64_t offset
     crp->cr_otype = CAP_OTYPE_UNSEALED;
 #ifdef CHERI_128
     crp->cr_pesbt_xored_for_mem = 0UL;
-#else
-    crp->_sbit_for_memory = false;
+//#else
+//    crp->_sbit_for_memory = false;
 #endif
+    crp->_sbit_for_memory = false; //LLM: use sbit for all cases
 }
 
 #if defined(CHERI_128) && !defined(CHERI_MAGIC128)
