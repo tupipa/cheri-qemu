@@ -166,10 +166,10 @@ static inline void cap_set_sealed(cap_register_t* c, uint32_t type) {
     assert(type <= CAP_MAX_SEALED_OTYPE);
     _Static_assert(CAP_MAX_SEALED_OTYPE < CAP_OTYPE_UNSEALED, "");
     c->cr_otype = type;
-#ifndef CHERI_128
+//#ifndef CHERI_128
     assert(c->_sbit_for_memory == false);
     c->_sbit_for_memory = true;
-#endif
+//#endif
 }
 
 static inline void cap_set_unsealed(cap_register_t* c) {
@@ -177,10 +177,10 @@ static inline void cap_set_unsealed(cap_register_t* c) {
     assert(cap_is_sealed_with_type(c));
     assert(c->cr_otype <= CAP_MAX_SEALED_OTYPE && "should not use this to unsealed reserved types");
     c->cr_otype = CAP_OTYPE_UNSEALED;
-#ifndef CHERI_128
+//#ifndef CHERI_128
     assert(c->_sbit_for_memory == true);
     c->_sbit_for_memory = false;
-#endif
+//#endif
 }
 
 static inline bool cap_is_sealed_entry(const cap_register_t* c) {
@@ -282,9 +282,10 @@ static inline void set_max_perms_capability(cap_register_t *crp, uint64_t offset
     crp->cr_otype = CAP_OTYPE_UNSEALED;
 #ifdef CHERI_128
     crp->cr_pesbt_xored_for_mem = 0UL;
-#else
-    crp->_sbit_for_memory = false;
+//#else
+//   crp->_sbit_for_memory = false;
 #endif
+    crp->_sbit_for_memory = false;
 }
 
 #if defined(CHERI_128) && !defined(CHERI_MAGIC128)
