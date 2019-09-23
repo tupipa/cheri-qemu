@@ -376,16 +376,15 @@ static inline void check_cap(CPUMIPSState *env, const cap_register_t *cr,
         cause = CP2Ca_TYPE;
         fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION: \n"
             "\tPCC.type different with current cap in use: \n"
-            "DDC type: 0x%x, cap type: 0x%x" , 
+            "DDC type: 0x%x, cap type: 0x%x\n" , 
             __FILE__, __FUNCTION__, env->active_tc.PCC.cr_otype, cr->cr_otype);
         goto do_exception;
-    }
-    if (!caps_have_same_type(&env->active_tc.CHWR.DDC, cr) )
+    }else if (!caps_have_same_type(&env->active_tc.CHWR.DDC, cr) )
     {
         cause = CP2Ca_TYPE;
         fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION: \n"
             "\tDDC.type different with current cap in use: \n"
-            "DDC type: 0x%x, cap type: 0x%x" , 
+            "DDC type: 0x%x, cap type: 0x%x\n" , 
             __FILE__, __FUNCTION__, env->active_tc.CHWR.DDC.cr_otype, cr->cr_otype);
         goto do_exception;
     }
