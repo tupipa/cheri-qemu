@@ -123,7 +123,8 @@ static inline bool cap_is_sealed_with_type(const cap_register_t* c) {
             cheri_debug_assert(c->cr_otype == CAP_OTYPE_UNSEALED || c->cr_otype == CAP_OTYPE_SENTRY);
     }
 #endif
-    return c->cr_otype <= CAP_MAX_SEALED_OTYPE;
+    //return c->cr_otype <= CAP_MAX_SEALED_OTYPE;
+    return c->_sbit_for_memory; // LLM: TODO: the reserved types???
 }
 
 // Check if num_bytes bytes at addr can be read using capability c
@@ -157,7 +158,8 @@ static inline bool cap_is_unsealed(const cap_register_t* c) {
             cheri_debug_assert(c->cr_otype == CAP_OTYPE_UNSEALED || c->cr_otype == CAP_OTYPE_SENTRY);
     }
 #endif
-    return c->cr_otype >= CAP_OTYPE_UNSEALED;
+    return ! c->_sbit_for_memory; // LLM: always use this sealed bit for seal testing
+    //return c->cr_otype >= CAP_OTYPE_UNSEALED;
 }
 
 static inline void cap_set_sealed(cap_register_t* c, uint32_t type) {
