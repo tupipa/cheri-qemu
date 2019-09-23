@@ -321,6 +321,11 @@ static inline bool caps_have_same_type(const cap_register_t* cap1, const cap_reg
     return (cap1->cr_otype == cap2->cr_otype);
 }
 
+static inline bool cap_is_reserved_type(const cap_register_t* cap1){
+    return (cap1->cr_otype >= CAP_LAST_SPECIAL_OTYPE);
+}
+
+
 static inline void check_cap(CPUMIPSState *env, const cap_register_t *cr,
         uint32_t perm, uint64_t addr, uint16_t regnum, uint32_t len, bool instavail, uintptr_t pc)
 {
@@ -371,15 +376,28 @@ static inline void check_cap(CPUMIPSState *env, const cap_register_t *cr,
         goto do_exception;
     }
 
-    if (!caps_have_same_type(&env->active_tc.PCC, cr) )
+    if (!cap_is_reserved_type(cr) && !caps_have_same_type(&env->active_tc.PCC, cr) )
     {
         cause = CP2Ca_TYPE;
         fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION: \n"
             "\tPCC.type different with current cap in use: \n"
-            "DDC type: 0x%x, cap type: 0x%x\n" , 
+            "PCC type: 0x%x, cap type: 0x%x\n" , 
             __FILE__, __FUNCTION__, env->active_tc.PCC.cr_otype, cr->cr_otype);
         goto do_exception;
-    }else if (!caps_have_same_type(&env->active_tc.CHWR.DDC, cr) )
+    }
+
+#if 0
+    if (!caps_have_same_type(&env->active_tc._CGPR[CP2CAP_IDC], cr) )
+    {
+        cause = CP2Ca_TYPE;
+        fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION: \n"
+            "\tIDC.type different with current cap in use: \n"
+            "IDC type: 0x%x, cap type: 0x%x\n" , 
+            __FILE__, __FUNCTION__, env->active_tc._CGPR[CP2CAP_IDC].cr_otype, cr->cr_otype);
+        goto do_exception;
+    }
+
+    if (!caps_have_same_type(&env->active_tc.CHWR.DDC, cr) )
     {
         cause = CP2Ca_TYPE;
         fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION: \n"
@@ -388,7 +406,7 @@ static inline void check_cap(CPUMIPSState *env, const cap_register_t *cr,
             __FILE__, __FUNCTION__, env->active_tc.CHWR.DDC.cr_otype, cr->cr_otype);
         goto do_exception;
     }
-
+#endif
     //fprintf(qemu_logfile, "LLM: %s:%s: cap got checked\n", 
     //        __FILE__, __FUNCTION__);
     return;
