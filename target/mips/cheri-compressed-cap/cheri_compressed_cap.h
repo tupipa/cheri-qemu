@@ -680,7 +680,7 @@ static inline void decompress_128cap_already_xored(uint64_t pesbt, uint64_t curs
     cdp->cr_base = (uint64_t)base;
 
     // LLM: extract the sealed bit:
-    cdp->_sbit_for_memory = (bool)(uint32_t)CC128_EXTRACT_FIELD(pesbt, SEALED_BIT)
+    cdp->_sbit_for_memory = (bool)(uint32_t)CC128_EXTRACT_FIELD(pesbt, SEALED_BIT);
 }
 
 /*
