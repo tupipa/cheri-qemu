@@ -247,6 +247,22 @@ void cheri_cpu_dump_statistics(CPUState *cs, FILE*f,
 #endif
 }
 
+/**
+ * LLM: utility funcs to check types of two capabilities
+ * */
+
+// #define TYPE_CHECK_CHECK_CAP
+#define TYPE_CHECK_LOAD_VIA_CAP
+
+static inline bool caps_have_same_type(const cap_register_t* cap1, const cap_register_t* cap2){
+    return (cap1->cr_otype == cap2->cr_otype);
+}
+
+static inline bool cap_is_reserved_type(const cap_register_t* cap1){
+    return (cap1->cr_otype >= CAP_LAST_SPECIAL_OTYPE);
+}
+
+
 static inline bool
 is_cap_sealed(const cap_register_t *cp)
 {
@@ -316,16 +332,6 @@ static inline int align_of(int size, uint64_t addr)
     }
 }
 
-
-static inline bool caps_have_same_type(const cap_register_t* cap1, const cap_register_t* cap2){
-    return (cap1->cr_otype == cap2->cr_otype);
-}
-
-static inline bool cap_is_reserved_type(const cap_register_t* cap1){
-    return (cap1->cr_otype >= CAP_LAST_SPECIAL_OTYPE);
-}
-
-
 static inline void check_cap(CPUMIPSState *env, const cap_register_t *cr,
         uint32_t perm, uint64_t addr, uint16_t regnum, uint32_t len, bool instavail, uintptr_t pc)
 {
@@ -376,6 +382,8 @@ static inline void check_cap(CPUMIPSState *env, const cap_register_t *cr,
         goto do_exception;
     }
 
+#ifdef TYPE_CHECK_CHECK_CAP
+
     if (!cap_is_reserved_type(cr) && !caps_have_same_type(&env->active_tc.PCC, cr) )
     {
         cause = CP2Ca_TYPE;
@@ -409,6 +417,9 @@ static inline void check_cap(CPUMIPSState *env, const cap_register_t *cr,
 #endif
     //fprintf(qemu_logfile, "LLM: %s:%s: cap got checked\n", 
     //        __FILE__, __FUNCTION__);
+
+#endif // TYPE_CHECK_CHECK_CAP
+
     return;
 
 do_exception:
@@ -1709,6 +1720,18 @@ target_ulong CHERI_HELPER_IMPL(cload)(CPUMIPSState *env, uint32_t cb, target_ulo
         do_raise_c2_exception(env, CP2Ca_SEAL, cb);
     } else if (!(cbp->cr_perms & CAP_PERM_LOAD)) {
         do_raise_c2_exception(env, CP2Ca_PERM_LD, cb);
+
+#ifdef TYPE_CHECK_LOAD_VIA_CAP
+  
+    } else if (!caps_have_same_type(&env->active_tc.PCC, cbp)) {
+            cause = CP2Ca_TYPE;
+            fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION: \n"
+                "\tPCC.type different with current cap in use: \n"
+                "PCC type: 0x%x, cap type: 0x%x\n" , 
+                __FILE__, __FUNCTION__, env->active_tc.PCC.cr_otype, cr->cr_otype);
+            goto do_exception;
+#endif // TYPE_CHECK_LOAD_VIA_CAP
+
     } else {
         uint64_t cursor = cap_get_cursor(cbp);
         uint64_t addr = cursor + rt + (int32_t)offset;
