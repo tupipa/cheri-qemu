@@ -265,7 +265,8 @@ CC128_STATIC_ASSERT(CC128_FIELD_EXPONENT_HIGH_PART_SIZE + CC128_FIELD_LH_SIZE ==
 enum {
     CC128_FIELD(UPERMS, 127, 124),
     CC128_FIELD(HWPERMS, 123, 112),
-    CC128_FIELD(RESERVED, 111, 109),
+    CC128_FIELD(RESERVED, 111, 109),   // LLM: TODO: change to 111,110
+    CC128_FIELD(SEALED_BIT, 109, 109), // LLM: use one seal bit for experiment
     CC128_FIELD(OTYPE, 108, 91),
     CC128_FIELD(INTERNAL_EXPONENT, 90, 90),
     CC128_FIELD(TOP_ENCODED, 89, 78),
@@ -379,6 +380,7 @@ enum {
         CC128_ENCODE_FIELD(0, UPERMS) |
         CC128_ENCODE_FIELD(0, HWPERMS) |
         CC128_ENCODE_FIELD(0, RESERVED) |
+        CC128_ENCODE_FIELD(0, SEALED_BIT) | // LLM: sealed bit is 0.
         CC128_ENCODE_FIELD(1, INTERNAL_EXPONENT) |
         CC128_ENCODE_FIELD(CC128_OTYPE_UNSEALED, OTYPE) |
         CC128_ENCODE_FIELD(CC128_RESET_TOP, EXP_NONZERO_TOP) |
@@ -676,6 +678,9 @@ static inline void decompress_128cap_already_xored(uint64_t pesbt, uint64_t curs
     cdp->_cr_top = top;
     cdp->cr_offset = cursor - (uint64_t)base;
     cdp->cr_base = (uint64_t)base;
+
+    // LLM: extract the sealed bit:
+    cdp->_sbit_for_memory = (bool)(uint32_t)CC128_EXTRACT_FIELD(pesbt, SEALED_BIT)
 }
 
 /*
@@ -817,9 +822,13 @@ static inline uint64_t compress_128cap_without_xor(const cap_register_t* csp) {
         Te = Tbits | expHighBits;
         Be = Bbits | expLowBits;
     }
+
+    // LLM: read seal bit from csp
+    bool S_BIT = csp->_sbit_for_memory > 0 ? true : false;
     uint64_t pesbt =
         CC128_ENCODE_FIELD(csp->cr_uperms, UPERMS) |
         CC128_ENCODE_FIELD(csp->cr_perms, HWPERMS) |
+        CC128_ENCODE_FIELD(S_BIT, SEALED_BIT) |
         CC128_ENCODE_FIELD(csp->cr_otype, OTYPE) |
         CC128_ENCODE_FIELD(IE, INTERNAL_EXPONENT) |
         CC128_ENCODE_FIELD(Te, TOP_ENCODED) |
