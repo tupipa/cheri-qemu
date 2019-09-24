@@ -253,7 +253,7 @@ void cheri_cpu_dump_statistics(CPUState *cs, FILE*f,
 
 #define TYPE_CHECK_CHECK_CAP
 //#define TYPE_CHECK_LOAD_VIA_CAP
-#define TYPE_CHECK_LOAD_CAP_FROM_MEMORY
+//#define TYPE_CHECK_LOAD_CAP_FROM_MEMORY
 
 static inline bool caps_have_same_type(const cap_register_t* cap1, const cap_register_t* cap2){
     return (cap1->cr_otype == cap2->cr_otype);
@@ -2262,12 +2262,12 @@ static void store_cap_to_memory(CPUMIPSState *env, uint32_t cs,
 
 #ifdef TYPE_CHECK_LOAD_CAP_FROM_MEMORY
     // LLM: this will print overwhelming messages;
-    if (!caps_have_same_type(&env->active_tc.PCC, &ncd) )
+    if (!caps_have_same_type(&env->active_tc.PCC, csp) )
     {
         fprintf(qemu_logfile, 
             "LLM: WARNING: %s:%s: store a capability with different type: \n"
             "PCC type: 0x%x, capreg[%d] type: 0x%x\n" , 
-            __FILE__, __FUNCTION__, env->active_tc.PCC.cr_otype, cd, ncd.cr_otype);
+            __FILE__, __FUNCTION__, env->active_tc.PCC.cr_otype, cs, csp->cr_otype);
     }
 
 #endif // TYPE_CHECK_LOAD_CAP_FROM_MEMORY
