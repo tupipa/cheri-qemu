@@ -2239,7 +2239,7 @@ static void load_cap_from_memory(CPUMIPSState *env, uint32_t cd, uint32_t cb,
 #endif
 
 #ifdef TYPE_CHECK_LOAD_CAP_FROM_MEMORY
- 
+    // LLM: this will print overwhelming messages;
     if (!caps_have_same_type(&env->active_tc.PCC, &ncd) )
     {
         fprintf(qemu_logfile, 
@@ -2259,6 +2259,19 @@ static void store_cap_to_memory(CPUMIPSState *env, uint32_t cs,
     const cap_register_t *csp = get_readonly_capreg(&env->active_tc, cs);
     uint64_t cursor = cap_get_cursor(csp);
     uint64_t pesbt;
+
+#ifdef TYPE_CHECK_LOAD_CAP_FROM_MEMORY
+    // LLM: this will print overwhelming messages;
+    if (!caps_have_same_type(&env->active_tc.PCC, &ncd) )
+    {
+        fprintf(qemu_logfile, 
+            "LLM: WARNING: %s:%s: store a capability with different type: \n"
+            "PCC type: 0x%x, capreg[%d] type: 0x%x\n" , 
+            __FILE__, __FUNCTION__, env->active_tc.PCC.cr_otype, cd, ncd.cr_otype);
+    }
+
+#endif // TYPE_CHECK_LOAD_CAP_FROM_MEMORY
+
     if (csp->cr_tag)
         pesbt = compress_128cap(csp);
     else
@@ -2292,6 +2305,7 @@ static void store_cap_to_memory(CPUMIPSState *env, uint32_t cs,
         cvtrace_dump_cap_cbl(&env->cvtrace, csp);
     }
 #endif
+
 }
 
 #elif defined(CHERI_MAGIC128)
