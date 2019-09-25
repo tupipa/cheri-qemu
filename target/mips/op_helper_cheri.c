@@ -386,7 +386,8 @@ static inline void check_cap(CPUMIPSState *env, const cap_register_t *cr,
 #ifdef TYPE_CHECK_CHECK_CAP
 
     //if (!cap_is_reserved_type(cr) && !caps_have_same_type(&env->active_tc.PCC, cr) )
-    if (regnum != 0 && !caps_have_same_type(&env->active_tc.PCC, cr) )
+    //if (regnum != 0 && !caps_have_same_type(&env->active_tc.PCC, cr) )
+    if ( !caps_have_same_type(&env->active_tc.PCC, cr) )
     {
         cause = CP2Ca_TYPE;
         fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION: \n"
