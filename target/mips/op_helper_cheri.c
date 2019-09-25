@@ -252,7 +252,7 @@ void cheri_cpu_dump_statistics(CPUState *cs, FILE*f,
  * */
 
 #define TYPE_CHECK_CHECK_CAP
-//#define TYPE_CHECK_LOAD_VIA_CAP
+#define TYPE_CHECK_LOAD_VIA_CAP
 //#define TYPE_CHECK_LOAD_CAP_FROM_MEMORY
 
 static inline bool caps_have_same_type(const cap_register_t* cap1, const cap_register_t* cap2){
@@ -389,12 +389,24 @@ static inline void check_cap(CPUMIPSState *env, const cap_register_t *cr,
     //if (regnum != 0 && !caps_have_same_type(&env->active_tc.PCC, cr) )
     if ( !caps_have_same_type(&env->active_tc.PCC, cr) )
     {
-        cause = CP2Ca_TYPE;
-        fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION: \n"
+	if (regnum == 0){
+#if 0
+	  fprintf(qemu_logfile, "LLM: WARNING @ %s:%s: PCC.type != DCC.type: \n"
+            "PCC: 0x%lx; PCC type: 0x%x, DCC [$%d] type: 0x%x\n" ,
+            __FILE__, __FUNCTION__,
+            (env->active_tc.PCC.cr_offset + env->active_tc.PCC.cr_base),
+	    env->active_tc.PCC.cr_otype, regnum, cr->cr_otype);
+#endif
+	}else{
+          cause = CP2Ca_TYPE;
+          fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION: \n"
             "\tPCC.type different with current cap in use: \n"
-            "PCC type: 0x%x, capreg[%d] type: 0x%x\n" , 
-            __FILE__, __FUNCTION__, env->active_tc.PCC.cr_otype, regnum, cr->cr_otype);
-        goto do_exception;
+            "PCC: 0x%lx; PCC type: 0x%x, capreg[%d] type: 0x%x\n" , 
+            __FILE__, __FUNCTION__, 
+            (env->active_tc.PCC.cr_offset + env->active_tc.PCC.cr_base),
+	    env->active_tc.PCC.cr_otype, regnum, cr->cr_otype);
+           goto do_exception;
+	}
     }
 
 #if 0
@@ -1733,11 +1745,14 @@ target_ulong CHERI_HELPER_IMPL(cload)(CPUMIPSState *env, uint32_t cb, target_ulo
     // Here we focused on Types only, but should also be able to integrate with bounds check.
     } else if (cb != 0 && !caps_have_same_type(&env->active_tc.PCC, cbp)) {
             uint16_t cause = CP2Ca_TYPE;
-            fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION: \n"
-                "\tPCC.type different with current cap in use: \n"
-                "PCC type: 0x%x, cap[%d] type: 0x%x\n" , 
-                __FILE__, __FUNCTION__, env->active_tc.PCC.cr_otype, cb, cbp->cr_otype);
-            do_raise_c2_exception(env, cause, cb);
+            fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION on cload via cap: \n"
+                "\tPCC.type different with the cap for load: \n"
+                "PCC: 0x%lx; PCC.type: 0x%x, cap[%d] type: 0x%x\n" , 
+                __FILE__, __FUNCTION__,
+	       	(env->active_tc.PCC.cr_otype + env->active_tc.PCC.cr_base), 
+	       	env->active_tc.PCC.cr_otype, 
+		cb, cbp->cr_otype);
+            //do_raise_c2_exception(env, cause, cb);
 #endif // TYPE_CHECK_LOAD_VIA_CAP
 
     } else {
