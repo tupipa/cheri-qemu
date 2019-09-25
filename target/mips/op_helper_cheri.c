@@ -253,6 +253,7 @@ void cheri_cpu_dump_statistics(CPUState *cs, FILE*f,
 
 #define TYPE_CHECK_CHECK_CAP
 #define TYPE_CHECK_LOAD_VIA_CAP
+#define TYPE_CHECK_STORE_VIA_CAP
 //#define TYPE_CHECK_LOAD_CAP_FROM_MEMORY
 
 static inline bool caps_have_same_type(const cap_register_t* cap1, const cap_register_t* cap2){
@@ -1772,7 +1773,7 @@ target_ulong CHERI_HELPER_IMPL(cload)(CPUMIPSState *env, uint32_t cb, target_ulo
                     uint16_t cause = CP2Ca_TYPE;
                     fprintf(qemu_logfile, "LLM: ****************** ");
                     fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION on cload via cap: \n"
-                        "\tPCC.type different with the cap for load: \n"
+                        "\tPCC.type different with the cap for cload: \n"
                         "PCC: 0x%lx; PCC.type: 0x%x, cap[%d] type: 0x%x\n" , 
                         __FILE__, __FUNCTION__,
                     (env->active_tc.PCC.cr_offset + env->active_tc.PCC.cr_base), 
@@ -1893,6 +1894,38 @@ target_ulong CHERI_HELPER_IMPL(cstore)(CPUMIPSState *env, uint32_t cb, target_ul
         } else {
             // Can't do this here.  It might miss in the TLB.
             // cheri_tag_invalidate(env, addr, size);
+
+#ifdef TYPE_CHECK_LOAD_VIA_CAP
+            // LLM: if the cb is not DDC, then check its type
+            // if cb is DDC, then don't check the type against PCC yet.
+            // TODO: must find a way to limit the DDC for legacy codes; 
+            // OR disable the DDC completely, in this case, we need to declare all data as capabilities.
+            // Note that this is different with the pure-cap in CHERI arch which is more focused on bounds.
+            // Here we focused on Types only, but should also be able to integrate with bounds check.
+            if (cb != 0 && !caps_have_same_type(&env->active_tc.PCC, cbp)) {
+
+                // LLM: - if capability used for loading has -1 as type; don't check
+                //      - if PCC has -1 as type, this means the program is not protected; don't check
+
+                if (cbp->cr_otype != 0x3ffff && env->active_tc.PCC.cr_otype != 0x3ffff)
+                {
+
+                    uint16_t cause = CP2Ca_TYPE;
+                    fprintf(qemu_logfile, "LLM: ****************** ");
+                    fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION on cload via cap: \n"
+                        "\tPCC.type different with the cap for cstore: \n"
+                        "PCC: 0x%lx; PCC.type: 0x%x, cap[%d] type: 0x%x\n" , 
+                        __FILE__, __FUNCTION__,
+                    (env->active_tc.PCC.cr_offset + env->active_tc.PCC.cr_base), 
+                    env->active_tc.PCC.cr_otype, 
+                    cb, cbp->cr_otype);
+                        //do_raise_c2_exception(env, cause, cb);
+                }
+                
+            }
+            
+#endif // TYPE_CHECK_STORE_VIA_CAP
+
             return addr;
         }
     }
