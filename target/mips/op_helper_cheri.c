@@ -1744,15 +1744,19 @@ target_ulong CHERI_HELPER_IMPL(cload)(CPUMIPSState *env, uint32_t cb, target_ulo
     // Note that this is different with the pure-cap in CHERI arch which is more focused on bounds.
     // Here we focused on Types only, but should also be able to integrate with bounds check.
     } else if (cb != 0 && !caps_have_same_type(&env->active_tc.PCC, cbp)) {
-            uint16_t cause = CP2Ca_TYPE;
+     
+	if (cbp->cr_otype != 0x3ffff && env->active_tc.PCC.cr_otype != 0x3ffff)
+	{
+	    uint16_t cause = CP2Ca_TYPE;
             fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION on cload via cap: \n"
                 "\tPCC.type different with the cap for load: \n"
                 "PCC: 0x%lx; PCC.type: 0x%x, cap[%d] type: 0x%x\n" , 
                 __FILE__, __FUNCTION__,
-	       	(env->active_tc.PCC.cr_otype + env->active_tc.PCC.cr_base), 
+	       	(env->active_tc.PCC.cr_offset + env->active_tc.PCC.cr_base), 
 	       	env->active_tc.PCC.cr_otype, 
 		cb, cbp->cr_otype);
             //do_raise_c2_exception(env, cause, cb);
+	}
 #endif // TYPE_CHECK_LOAD_VIA_CAP
 
     } else {
