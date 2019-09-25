@@ -1735,30 +1735,6 @@ target_ulong CHERI_HELPER_IMPL(cload)(CPUMIPSState *env, uint32_t cb, target_ulo
         do_raise_c2_exception(env, CP2Ca_SEAL, cb);
     } else if (!(cbp->cr_perms & CAP_PERM_LOAD)) {
         do_raise_c2_exception(env, CP2Ca_PERM_LD, cb);
-
-#ifdef TYPE_CHECK_LOAD_VIA_CAP
-    // if the cb is not DDC, then check its type
-    // if cb is DDC, then don't check the type against PCC yet.
-    // TODO: LLM: must find a way to limit the DDC for legacy codes; 
-    // OR disable the DDC completely, in this case, we need to declare all data as capabilities.
-    // Note that this is different with the pure-cap in CHERI arch which is more focused on bounds.
-    // Here we focused on Types only, but should also be able to integrate with bounds check.
-    } else if (cb != 0 && !caps_have_same_type(&env->active_tc.PCC, cbp)) {
-     
-	if (cbp->cr_otype != 0x3ffff && env->active_tc.PCC.cr_otype != 0x3ffff)
-	{
-	    uint16_t cause = CP2Ca_TYPE;
-            fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION on cload via cap: \n"
-                "\tPCC.type different with the cap for load: \n"
-                "PCC: 0x%lx; PCC.type: 0x%x, cap[%d] type: 0x%x\n" , 
-                __FILE__, __FUNCTION__,
-	       	(env->active_tc.PCC.cr_offset + env->active_tc.PCC.cr_base), 
-	       	env->active_tc.PCC.cr_otype, 
-		cb, cbp->cr_otype);
-            //do_raise_c2_exception(env, cause, cb);
-	}
-#endif // TYPE_CHECK_LOAD_VIA_CAP
-
     } else {
         uint64_t cursor = cap_get_cursor(cbp);
         uint64_t addr = cursor + rt + (int32_t)offset;
@@ -1776,6 +1752,39 @@ target_ulong CHERI_HELPER_IMPL(cload)(CPUMIPSState *env, uint32_t cb, target_ulo
             do_raise_c0_exception(env, EXCP_AdEL, addr);
 #endif
         } else {
+
+
+#ifdef TYPE_CHECK_LOAD_VIA_CAP
+            // if the cb is not DDC, then check its type
+            // if cb is DDC, then don't check the type against PCC yet.
+            // TODO: LLM: must find a way to limit the DDC for legacy codes; 
+            // OR disable the DDC completely, in this case, we need to declare all data as capabilities.
+            // Note that this is different with the pure-cap in CHERI arch which is more focused on bounds.
+            // Here we focused on Types only, but should also be able to integrate with bounds check.
+            if (cb != 0 && !caps_have_same_type(&env->active_tc.PCC, cbp)) {
+
+                // LLM: - if capability used for loading has -1 as type; don't check
+                //      - if PCC has -1 as type, this means the program is not protected; don't check
+
+                if (cbp->cr_otype != 0x3ffff && env->active_tc.PCC.cr_otype != 0x3ffff)
+                {
+
+                    uint16_t cause = CP2Ca_TYPE;
+                    fprintf(qemu_logfile, "LLM: ****************** ");
+                    fprintf(qemu_logfile, "LLM: %s:%s: CAP TYPE VIOLATION on cload via cap: \n"
+                        "\tPCC.type different with the cap for load: \n"
+                        "PCC: 0x%lx; PCC.type: 0x%x, cap[%d] type: 0x%x\n" , 
+                        __FILE__, __FUNCTION__,
+                    (env->active_tc.PCC.cr_offset + env->active_tc.PCC.cr_base), 
+                    env->active_tc.PCC.cr_otype, 
+                    cb, cbp->cr_otype);
+                        //do_raise_c2_exception(env, cause, cb);
+                }
+                
+            }
+            
+#endif // TYPE_CHECK_LOAD_VIA_CAP
+
             return addr;
         }
     }
